@@ -9,35 +9,56 @@ run-scanners:
   stage: fast-scan
   image: docker:latest
   script:
-    - docker run --rm -v $PWD:/src semgrep/semgrep semgrep scan --config=auto --sarif -o semgrep.sarif &
-    - docker run --rm -v $PWD:/path zricethezav/gitleaks:latest detect --source="/path" --report-path="/path/gitleaks.json" --exit-code=0 &
-    # Ensure gitleaks.sarif is also generated or just use json if that's what we have. GH action uses gitleaks.sarif but also uploads json.
-    # The GH action command was: uses: gitleaks/gitleaks-action@v2 ... env: GITLEAKS_OUTPUT: gitleaks.sarif
-    # Adapting the docker command to output sarif if possible, or just keeping naming consistent.
-    # Gitleaks docker image supports -f sarif.
-    - docker run --rm -v $PWD:/path zricethezav/gitleaks:latest detect --source="/path" --report-path="/path/gitleaks.sarif" --format="sarif" --exit-code=0 &
-    - docker run --rm -v $PWD:/tf bridgecrew/checkov:latest -d /tf --output sarif --soft-fail > checkov.sarif &
+    # 0. Start Application (Background) - matching GH Actions logic
+    - |
+      if [ -f "start.sh" ]; then
+        chmod +x start.sh
+        ./start.sh > app.log 2>&1 &
+        echo "Waiting for app to launch..."
+        sleep 15
+      else
+        echo "⚠️ No start.sh found. DAST might fail if port 80 is closed."
+      fi
+
+    # 1. Run Scanners
+    - docker run --rm -v $PWD:/src semgrep/semgrep semgrep scan --config=auto --sarif --quiet -o semgrep.sarif &
+    - docker run --rm -v $PWD:/path zricethezav/gitleaks:latest detect --source="/path" --report-path="/path/gitleaks.json" --no-banner --exit-code=0 &
+    - docker run --rm -v $PWD:/tf bridgecrew/checkov:latest -d /tf --output sarif --quiet --soft-fail > checkov.sarif &
     - docker run --rm -v $PWD:/root/ aquasec/trivy:latest fs /root/ --format sarif --output trivy.sarif &
+    - docker run --rm -v $PWD:/zap/wrk/:/zap/wrk/ --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:80 -J z.json || true &
     - wait
+
   artifacts:
-    paths: [semgrep.sarif, gitleaks.sarif, checkov.sarif, trivy.sarif]
+    paths: [semgrep.sarif, gitleaks.json, checkov.sarif, trivy.sarif, z.json, ai_response.json]
 
 # 2. Push to AI Brain to trigger agentic remediation
 ai-brain-triage:
   stage: triage
   script:
     - |
-      curl -X POST $AI_BRAIN_URL/triage \
-        -H "Authorization: Bearer $AI_API_KEY" \
-        -F "project_name=$CI_PROJECT_PATH" \
-        -F "commit_sha=$CI_COMMIT_SHA" \
-        -F "branch=$CI_COMMIT_REF_NAME" \
-        -F "event_name=$CI_PIPELINE_SOURCE" \
-        -F "run_id=$CI_PIPELINE_ID" \
-        -F "files=@semgrep.sarif" \
-        -F "files=@gitleaks.sarif" \
-        -F "files=@checkov.sarif" \
-        -F "files=@trivy.sarif"
+      FILES_TO_SEND=""
+      for report in semgrep.sarif checkov.sarif trivy.sarif gitleaks.json z.json; do
+        if [ -f "$report" ]; then
+          FILES_TO_SEND="$FILES_TO_SEND -F files=@$report"
+        fi
+      done
+
+      if [ -n "$FILES_TO_SEND" ]; then
+        echo "🚀 Sending findings to AI Brain..."
+        curl -s -X POST $AI_BRAIN_URL/triage \
+          -H "Authorization: Bearer $AI_API_KEY" \
+          -F "project=$CI_PROJECT_PATH" \
+          -F "commit_sha=$CI_COMMIT_SHA" \
+          -F "branch=$CI_COMMIT_REF_NAME" \
+          -F "event_name=$CI_PIPELINE_SOURCE" \
+          -F "run_id=$CI_PIPELINE_ID" \
+          $FILES_TO_SEND > ai_response.json
+      else
+        echo '{"status": "no_reports"}' > ai_response.json
+      fi
+
+      echo "=== AI MODEL RESPONSE ==="
+      cat ai_response.json
 
 # 3. SonarQube runs independently
 sonarqube-check:
