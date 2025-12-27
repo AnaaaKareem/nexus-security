@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS | Security Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    },
+                    colors: {
+                        glass: {
+                            light: 'rgba(255, 255, 255, 0.7)',
+                            dark: 'rgba(0, 0, 0, 0.6)',
+                            border: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'SF Pro Display', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #000;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #000;
+        }
+
+        .dark .toggle-checkbox:checked+.toggle-label {
+            background-color: #fff;
+        }
+
+        /* Gradients */
+        .bg-mesh-dark {
+            background-color: #000000;
+            background-image: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+        }
+
+        .bg-mesh-light {
+            background-color: #e5e7eb;
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.4) 0, transparent 50%), radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.4) 0, transparent 50%), radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.4) 0, transparent 50%);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-mesh-dark text-white selection:bg-white selection:text-black">
+
+    <!-- Navbar -->
+    <nav
+        class="fixed w-full z-50 glass-panel bg-glass-dark border-b border-white/10 dark:bg-black/50 bg-white/50 dark:text-white text-black transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Brand -->
+                <div class="flex items-center gap-4">
+                    <h1 class="text-3xl font-bold tracking-tight">NEXUS</h1>
+                    <div
+                        class="flex items-center gap-2 px-3 py-1 text-[10px] uppercase tracking-widest font-semibold border rounded-full border-zinc-500/50">
+                        <span id="system-status-badge"
+                            class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
+                        <span id="system-status-text">INITIALIZING</span>
+                    </div>
+                </div>
+
+                <!-- Right Side -->
+                <div class="flex items-center gap-6">
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                        <!-- Sun Icon -->
+                        <svg id="sun-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                        <!-- Moon Icon -->
+                        <svg id="moon-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                    </button>
+
+
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-12">
+
+        <!-- Welcome Section -->
+        <header class="mb-12">
+            <h2 class="text-5xl font-bold mb-4 tracking-tighter">System Overview</h2>
+            <p class="text-xl opacity-60 font-light">Real-time security telemetry and anomaly detection metrics.</p>
+        </header>
+
+        <!-- Stats Grid (Glass Cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <!-- Card 1 -->
+            <div
+                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
+                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Total Findings</h3>
+                <p class="text-6xl font-light tracking-tighter" id="total-findings">-</p>
+                <div class="mt-4 text-xs font-medium text-green-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-400"></span> Active
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div
+                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
+                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Critical Risks</h3>
+                <p class="text-6xl font-light tracking-tighter" id="critical-count">-</p>
+                <div class="mt-4 text-xs font-medium text-red-400 flex items-center gap-1">
+                    ▲ High Priority
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div
+                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
+                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">AI Fixed</h3>
+                <p class="text-6xl font-light tracking-tighter" id="auto-fixed">-</p>
+                <div class="mt-4 text-xs font-medium text-blue-400 flex items-center gap-1">
+                    ● Auto-Remediated
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div
+                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
+                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Scans Run</h3>
+                <p class="text-6xl font-light tracking-tighter" id="total-scans">-</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <!-- Severity Chart -->
+            <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-2xl font-bold tracking-tight">Vulnerability Matrix</h3>
+                    <button class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs">Export</button>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="severityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- AI Perf Chart -->
+            <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-2xl font-bold tracking-tight">AI Efficacy</h3>
+                    <div class="flex gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="aiChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Findings Table -->
+        <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold tracking-tight">Recent Critical Findings</h3>
+                <span class="text-xs font-mono opacity-50">TOP 10 BY RISK SCORE</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase tracking-widest opacity-50 border-b border-white/10">
+                            <th class="pb-4 pl-4">Tool</th>
+                            <th class="pb-4">Severity</th>
+                            <th class="pb-4">Risk Score</th>
+                            <th class="pb-4">Location</th>
+                            <th class="pb-4 pr-4 text-right">Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody id="findings-table-body" class="text-sm font-light">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const html = document.documentElement;
+        const toggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+        const body = document.body;
+
+        // Theme Toggle Logic
+        toggleBtn.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                body.classList.remove('bg-mesh-dark');
+                body.classList.add('bg-mesh-light');
+                body.classList.remove('text-white');
+                body.classList.add('text-black');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                html.classList.add('dark');
+                body.classList.remove('bg-mesh-light');
+                body.classList.add('bg-mesh-dark');
+                body.classList.remove('text-black');
+                body.classList.add('text-white');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+            updateChartsTheme();
+        });
+
+        // Fetch Stats
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                // Update Health Indicators
+                updateHealthStatus(data.system_health);
+
+                // Animate Numbers
+                animateValue("total-scans", 0, data.total_scans, 1000);
+                animateValue("total-findings", 0, data.total_findings, 1000);
+                animateValue("critical-count", 0, data.severity.critical, 1000);
+                animateValue("auto-fixed", 0, data.ai_metrics.auto_fixed, 1000);
+
+                // Render Charts
+                renderCharts(data);
+
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                updateHealthStatus({ status: 'offline' });
+            }
+        }
+
+        function updateHealthStatus(health) {
+            const statusBadge = document.getElementById('system-status-badge');
+            const statusText = document.getElementById('system-status-text');
+
+            if (!health || health.status === 'offline') {
+                statusText.innerText = 'OFFLINE';
+                statusBadge.className = 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
+                return;
+            }
+
+            if (health.status === 'operational') {
+                statusText.innerText = 'OPERATIONAL';
+                statusBadge.className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse';
+            } else {
+                statusText.innerText = 'DEGRADED';
+                statusBadge.className = 'w-2 h-2 rounded-full bg-yellow-500 animate-pulse';
+            }
+        }
+
+
+
+        // Animated Number Counter
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        let severityChartInstance = null;
+        let aiChartInstance = null;
+
+        function renderCharts(data) {
+            const isDark = html.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+            const textColor = isDark ? '#fff' : '#000';
+
+            // Severity Chart
+            const ctxSev = document.getElementById('severityChart').getContext('2d');
+            severityChartInstance = new Chart(ctxSev, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low'],
+                    datasets: [{
+                        label: 'Vulnerabilities',
+                        data: [
+                            data.severity.critical,
+                            data.severity.high,
+                            data.severity.medium,
+                            data.severity.low
+                        ],
+                        backgroundColor: '#fff',
+                        borderRadius: 8,
+                        barThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { display: true, color: gridColor },
+                            ticks: { color: textColor }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // AI Chart
+            const ctxAi = document.getElementById('aiChart').getContext('2d');
+            aiChartInstance = new Chart(ctxAi, {
+                type: 'doughnut',
+                data: {
+                    labels: ['True Positives', 'False Positives', 'Auto-Fixed'],
+                    datasets: [{
+                        data: [
+                            data.total_findings - data.ai_metrics.false_positives,
+                            data.ai_metrics.false_positives,
+                            data.ai_metrics.auto_fixed
+                        ],
+                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'right', labels: { color: textColor } }
+                    }
+                }
+            });
+
+            updateChartsTheme();
+        }
+
+        function updateChartsTheme() {
+            if (!severityChartInstance || !aiChartInstance) return;
+
+            const isDark = html.classList.contains('dark');
+            const textColor = isDark ? '#fff' : '#000';
+            const barColor = isDark ? '#fff' : '#000';
+            const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+
+            // Update Severity
+            severityChartInstance.options.scales.x.ticks.color = textColor;
+            severityChartInstance.options.scales.y.ticks.color = textColor;
+            severityChartInstance.options.scales.y.grid.color = gridColor;
+            severityChartInstance.data.datasets[0].backgroundColor = barColor; // Monochrome bars
+            severityChartInstance.update();
+
+            aiChartInstance.update();
+        }
+
+        async function fetchFindings() {
+            try {
+                const response = await fetch('/api/findings');
+                const findings = await response.json();
+
+                const tbody = document.getElementById('findings-table-body');
+                tbody.innerHTML = ''; // Clear loading
+
+                findings.forEach(f => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+
+                    // Severity Badge Color
+                    let sevColor = 'bg-gray-500';
+                    if (f.severity === 'Critical') sevColor = 'bg-red-500';
+                    else if (f.severity === 'High') sevColor = 'bg-orange-500';
+                    else if (f.severity === 'Medium') sevColor = 'bg-yellow-500';
+
+                    row.innerHTML = `
+                        <td class="py-4 pl-4 font-medium">${f.tool}</td>
+                        <td class="py-4">
+                            <span class="px-2 py-1 rounded text-[10px] font-bold uppercase text-white ${sevColor}">${f.severity}</span>
+                        </td>
+                        <td class="py-4 font-mono">${f.risk_score.toFixed(1)}</td>
+                        <td class="py-4 opacity-70 truncate max-w-[200px]">${f.location}</td>
+                        <td class="py-4 pr-4 text-right">
+                             <span class="text-xs font-bold ${f.verdict === 'TP' ? 'text-red-400' : 'text-gray-400'}">${f.verdict || 'N/A'}</span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Error fetching findings:', error);
+            }
+        }
+
+        fetchStats();
+        fetchFindings();
+    </script>
+</body>
+
+</html>
