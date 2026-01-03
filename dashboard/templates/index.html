@@ -1,210 +1,210 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS | Security Intelligence</title>
+    <title>Nexus Security Intelligence</title>
+
+    <!-- Tech Stack -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                    },
-                    colors: {
-                        glass: {
-                            light: 'rgba(255, 255, 255, 0.7)',
-                            dark: 'rgba(0, 0, 0, 0.6)',
-                            border: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+
+    <!-- Custom Style -->
     <style>
-        body {
-            font-family: 'SF Pro Display', sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .glass-panel {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Custom Toggle Switch */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #000;
-        }
-
-        .toggle-checkbox:checked+.toggle-label {
-            background-color: #000;
-        }
-
-        .dark .toggle-checkbox:checked+.toggle-label {
-            background-color: #fff;
-        }
-
-        /* Gradients */
-        .bg-mesh-dark {
-            background-color: #000000;
-            background-image: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
-        }
-
-        .bg-mesh-light {
-            background-color: #e5e7eb;
-            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.4) 0, transparent 50%), radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.4) 0, transparent 50%), radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.4) 0, transparent 50%);
         }
     </style>
 </head>
 
-<body class="min-h-screen bg-mesh-dark text-white selection:bg-white selection:text-black">
+<body class="bg-gray-900 text-white min-h-screen font-sans">
 
     <!-- Navbar -->
-    <nav
-        class="fixed w-full z-50 glass-panel bg-glass-dark border-b border-white/10 dark:bg-black/50 bg-white/50 dark:text-white text-black transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <!-- Brand -->
-                <div class="flex items-center gap-4">
-                    <h1 class="text-3xl font-bold tracking-tight">NEXUS</h1>
-                    <div
-                        class="flex items-center gap-2 px-3 py-1 text-[10px] uppercase tracking-widest font-semibold border rounded-full border-zinc-500/50">
-                        <span id="system-status-badge"
-                            class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
-                        <span id="system-status-text">INITIALIZING</span>
-                    </div>
+    <nav class="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Branding -->
+                <div class="flex items-center">
+                    <span
+                        class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                        Nexus Security
+                    </span>
+                    <span
+                        class="ml-2 px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        v2.0 Multi-Repo
+                    </span>
                 </div>
 
-                <!-- Right Side -->
-                <div class="flex items-center gap-6">
-                    <!-- Theme Toggle -->
-                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-white/10 transition-colors">
-                        <!-- Sun Icon -->
-                        <svg id="sun-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                            </path>
-                        </svg>
-                        <!-- Moon Icon -->
-                        <svg id="moon-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
-                            </path>
-                        </svg>
-                    </button>
+                <!-- Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- Repo Carousel Controls -->
+                    <div class="flex items-center space-x-2">
+                        <button onclick="scrollCarousel(-1)"
+                            class="p-2 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 transition">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <button onclick="scrollCarousel(1)"
+                            class="p-2 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 transition">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
 
-
+                    <div id="systemStatus" class="flex items-center space-x-2 text-sm text-gray-500">
+                        <span id="systemStatusDot" class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                        <span id="systemStatusText">Checking...</span>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-12">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        <!-- Welcome Section -->
-        <header class="mb-12">
-            <h2 class="text-5xl font-bold mb-4 tracking-tighter">System Overview</h2>
-            <p class="text-xl opacity-60 font-light">Real-time security telemetry and anomaly detection metrics.</p>
-        </header>
+        <!-- Repository Carousel -->
+        <div class="mb-8">
+            <h2 class="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Project Portfolio</h2>
+            <div id="repoCarousel" class="flex overflow-x-auto space-x-4 pb-4 scroll-smooth no-scrollbar"
+                style="scroll-snap-type: x mandatory;">
+                <!-- Cards Injected Here -->
+                <div class="bg-gray-800/50 rounded-xl p-4 w-64 flex-shrink-0 animate-pulse">
+                    <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+                    <div class="mt-2 h-3 bg-gray-700 rounded w-1/2"></div>
+                </div>
+            </div>
+            <!-- Hidden Input for Logic -->
+            <input type="hidden" id="repoFilter" value="">
+        </div>
 
-        <!-- Stats Grid (Glass Cards) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <!-- Card 1 -->
-            <div
-                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
-                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Total Findings</h3>
-                <p class="text-6xl font-light tracking-tighter" id="total-findings">-</p>
-                <div class="mt-4 text-xs font-medium text-green-400 flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-green-400"></span> Active
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                Security Posture
+            </h1>
+            <p class="mt-2 text-gray-400">Real-time AI-driven vulnerability assessments.</p>
+        </div>
+
+        <!-- 1. Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+
+            <!-- Card 1: Risk -->
+            <div class="glass rounded-xl p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <p class="text-sm font-medium text-gray-400">Critical Issues</p>
+                <p class="mt-2 text-3xl font-bold text-red-400" id="statCritical">-</p>
+                <p class="mt-1 text-xs text-gray-500 flex items-center">
+                    <span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span> Needs Immediate Action
+                </p>
+            </div>
+
+            <!-- Card 2: AI Efficacy -->
+            <div class="glass rounded-xl p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z">
+                        </path>
+                    </svg>
+                </div>
+                <p class="text-sm font-medium text-gray-400">AI Efficacy</p>
+                <p class="mt-2 text-3xl font-bold text-purple-400" id="statAiEfficacy">-</p>
+                <p class="mt-1 text-xs text-gray-500 flex items-center">
+                    <span class="w-2 h-2 bg-purple-500 rounded-full mr-2"></span> Precision Rate
+                </p>
+            </div>
+
+            <!-- Card 3: MTTF -->
+            <div class="glass rounded-xl p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <p class="text-sm font-medium text-gray-400">Mean Time To Fix</p>
+                <p class="mt-2 text-3xl font-bold text-blue-400" id="statMttfAi">-</p>
+                <div class="mt-2 text-xs text-gray-500 space-y-1">
+                    <p>🤖 AI Fixed: <span id="valMttfAi" class="text-blue-300">-</span> h</p>
+                    <p>👨‍💻 Manual: <span id="valMttfManual" class="text-gray-300">-</span> h</p>
                 </div>
             </div>
 
-            <!-- Card 2 -->
-            <div
-                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
-                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Critical Risks</h3>
-                <p class="text-6xl font-light tracking-tighter" id="critical-count">-</p>
-                <div class="mt-4 text-xs font-medium text-red-400 flex items-center gap-1">
-                    ▲ High Priority
+            <!-- Card 4: Scans -->
+            <div class="glass rounded-xl p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-16 h-16 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                            clip-rule="evenodd"></path>
+                    </svg>
                 </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div
-                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
-                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">AI Fixed</h3>
-                <p class="text-6xl font-light tracking-tighter" id="auto-fixed">-</p>
-                <div class="mt-4 text-xs font-medium text-blue-400 flex items-center gap-1">
-                    ● Auto-Remediated
-                </div>
-            </div>
-
-            <!-- Card 4 -->
-            <div
-                class="glass-panel p-8 rounded-3xl bg-black/20 dark:bg-black/40 bg-white/40 shadow-2xl hover:scale-[1.02] transition-transform duration-300">
-                <h3 class="text-xs font-bold uppercase tracking-widest opacity-50 mb-2">Scans Run</h3>
-                <p class="text-6xl font-light tracking-tighter" id="total-scans">-</p>
+                <p class="text-sm font-medium text-gray-400">Total Scans</p>
+                <p class="mt-2 text-3xl font-bold text-green-400" id="statScans">-</p>
+                <p class="mt-1 text-xs text-gray-500 flex items-center">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span> Across all providers
+                </p>
             </div>
         </div>
 
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            <!-- Severity Chart -->
-            <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
-                <div class="flex items-center justify-between mb-8">
-                    <h3 class="text-2xl font-bold tracking-tight">Vulnerability Matrix</h3>
-                    <button class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs">Export</button>
-                </div>
-                <div class="relative h-64 w-full">
-                    <canvas id="severityChart"></canvas>
-                </div>
+        <!-- 2. Charts Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Vulnerability Trend -->
+            <div class="glass rounded-xl p-6">
+                <h3 class="text-lg font-medium text-gray-200 mb-4">Vulnerability Trend (Last 10 Scans)</h3>
+                <canvas id="riskChart" height="200"></canvas>
             </div>
 
-            <!-- AI Perf Chart -->
-            <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
-                <div class="flex items-center justify-between mb-8">
-                    <h3 class="text-2xl font-bold tracking-tight">AI Efficacy</h3>
-                    <div class="flex gap-2">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+            <!-- CI Distribution -->
+            <div class="glass rounded-xl p-6">
+                <h3 class="text-lg font-medium text-gray-200 mb-4">CI Source Provider</h3>
+                <div class="flex items-center justify-center h-full pb-4">
+                    <div class="w-2/3">
+                        <canvas id="ciChart"></canvas>
                     </div>
                 </div>
-                <div class="relative h-64 w-full">
-                    <canvas id="aiChart"></canvas>
-                </div>
             </div>
         </div>
 
-        <!-- Recent Findings Table -->
-        <div class="glass-panel p-8 rounded-3xl bg-white/10 dark:bg-black/30 shadow-2xl">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-2xl font-bold tracking-tight">Recent Critical Findings</h3>
-                <span class="text-xs font-mono opacity-50">TOP 10 BY RISK SCORE</span>
+        <!-- 3. Top Findings Table -->
+        <div class="glass rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-200">Top Priority Findings</h3>
+                <span class="text-xs text-gray-500">Live Feed</span>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="text-xs uppercase tracking-widest opacity-50 border-b border-white/10">
-                            <th class="pb-4 pl-4">Tool</th>
-                            <th class="pb-4">Severity</th>
-                            <th class="pb-4">Risk Score</th>
-                            <th class="pb-4">Location</th>
-                            <th class="pb-4 pr-4 text-right">Verdict</th>
+                <table class="w-full text-left text-sm text-gray-400">
+                    <thead class="bg-gray-800 text-xs uppercase text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Severity</th>
+                            <th scope="col" class="px-6 py-3">Tool</th>
+                            <th scope="col" class="px-6 py-3">Location</th>
+                            <th scope="col" class="px-6 py-3">Project</th>
+                            <th scope="col" class="px-6 py-3">Risk Score</th>
+                            <th scope="col" class="px-6 py-3">AI Confidence</th>
+                            <th scope="col" class="px-6 py-3">AI Verdict</th>
                         </tr>
                     </thead>
-                    <tbody id="findings-table-body" class="text-sm font-light">
-                        <!-- Rows injected via JS -->
+                    <tbody id="findingsTable" class="divide-y divide-gray-700">
+                        <!-- Populated by JS -->
+                        <tr>
+                            <td class="px-6 py-4" colspan="6" class="text-center">Loading Data...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -212,228 +212,297 @@
 
     </main>
 
+    <!-- JavaScript Logic -->
     <script>
-        const html = document.documentElement;
-        const toggleBtn = document.getElementById('theme-toggle');
-        const sunIcon = document.getElementById('sun-icon');
-        const moonIcon = document.getElementById('moon-icon');
-        const body = document.body;
+        // --- State ---
+        let riskChart, ciChart;
+        const API_BASE = "/api";
 
-        // Theme Toggle Logic
-        toggleBtn.addEventListener('click', () => {
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                body.classList.remove('bg-mesh-dark');
-                body.classList.add('bg-mesh-light');
-                body.classList.remove('text-white');
-                body.classList.add('text-black');
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            } else {
-                html.classList.add('dark');
-                body.classList.remove('bg-mesh-light');
-                body.classList.add('bg-mesh-dark');
-                body.classList.remove('text-black');
-                body.classList.add('text-white');
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-            }
-            updateChartsTheme();
-        });
-
-        // Fetch Stats
-        async function fetchStats() {
+        // --- Stats Fetcher ---
+        async function fetchStats(repo = "") {
             try {
-                const response = await fetch('/api/stats');
-                const data = await response.json();
+                const url = repo ? `${API_BASE}/stats?repo=${encodeURIComponent(repo)}` : `${API_BASE}/stats`;
+                const res = await fetch(url);
+                const data = await res.json();
 
-                // Update Health Indicators
-                updateHealthStatus(data.system_health);
+                // Update Simple Stats
+                document.getElementById('statCritical').textContent = data.severity.critical;
+                document.getElementById('statScans').textContent = data.total_scans;
+                // document.getElementById('statMttf').textContent = data.devsecops_metrics.mttf_hours + " h"; // Legacy
 
-                // Animate Numbers
-                animateValue("total-scans", 0, data.total_scans, 1000);
-                animateValue("total-findings", 0, data.total_findings, 1000);
-                animateValue("critical-count", 0, data.severity.critical, 1000);
-                animateValue("auto-fixed", 0, data.ai_metrics.auto_fixed, 1000);
+                // New MTTF Split
+                document.getElementById('statMttfAi').textContent = data.devsecops_metrics.mttf_ai_hours + " h";
+                document.getElementById('valMttfAi').textContent = data.devsecops_metrics.mttf_ai_hours;
+                document.getElementById('valMttfManual').textContent = data.devsecops_metrics.mttf_manual_hours;
 
-                // Render Charts
-                renderCharts(data);
+                document.getElementById('statAiEfficacy').textContent = data.ai_metrics.efficacy_percent + "%";
 
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-                updateHealthStatus({ status: 'offline' });
-            }
-        }
+                // Update Charts
+                updateCharts(data);
 
-        function updateHealthStatus(health) {
-            const statusBadge = document.getElementById('system-status-badge');
-            const statusText = document.getElementById('system-status-text');
+                // Update System Status
+                const statusDot = document.getElementById('systemStatusDot');
+                const statusText = document.getElementById('systemStatusText');
+                const sysStatus = document.getElementById('systemStatus');
 
-            if (!health || health.status === 'offline') {
-                statusText.innerText = 'OFFLINE';
-                statusBadge.className = 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
-                return;
-            }
-
-            if (health.status === 'operational') {
-                statusText.innerText = 'OPERATIONAL';
-                statusBadge.className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse';
-            } else {
-                statusText.innerText = 'DEGRADED';
-                statusBadge.className = 'w-2 h-2 rounded-full bg-yellow-500 animate-pulse';
-            }
-        }
-
-
-
-        // Animated Number Counter
-        function animateValue(id, start, end, duration) {
-            const obj = document.getElementById(id);
-            if (!obj) return;
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor(progress * (end - start) + start);
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
+                if (data.system_health.status === 'operational') {
+                    statusText.textContent = "System Optimal";
+                    statusText.className = "text-green-400";
+                    statusDot.className = "w-2 h-2 bg-green-500 rounded-full animate-pulse";
+                    sysStatus.className = "flex items-center space-x-2 text-sm text-green-400";
+                } else {
+                    statusText.textContent = "System Degraded";
+                    statusText.className = "text-yellow-400";
+                    statusDot.className = "w-2 h-2 bg-yellow-500 rounded-full animate-pulse";
+                    sysStatus.className = "flex items-center space-x-2 text-sm text-yellow-400";
                 }
-            };
-            window.requestAnimationFrame(step);
+
+            } catch (e) {
+                console.error("Stats Error:", e);
+            }
         }
 
-        let severityChartInstance = null;
-        let aiChartInstance = null;
+        // --- Findings Fetcher ---
+        async function fetchFindings(repo = "") {
+            try {
+                const url = repo ? `${API_BASE}/findings?repo=${encodeURIComponent(repo)}` : `${API_BASE}/findings`;
+                const res = await fetch(url);
+                const findings = await res.json();
 
-        function renderCharts(data) {
-            const isDark = html.classList.contains('dark');
-            const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-            const textColor = isDark ? '#fff' : '#000';
+                const tbody = document.getElementById('findingsTable');
+                tbody.innerHTML = "";
 
-            // Severity Chart
-            const ctxSev = document.getElementById('severityChart').getContext('2d');
-            severityChartInstance = new Chart(ctxSev, {
-                type: 'bar',
-                data: {
-                    labels: ['Critical', 'High', 'Medium', 'Low'],
-                    datasets: [{
-                        label: 'Vulnerabilities',
-                        data: [
-                            data.severity.critical,
-                            data.severity.high,
-                            data.severity.medium,
-                            data.severity.low
-                        ],
-                        backgroundColor: '#fff',
-                        borderRadius: 8,
-                        barThickness: 40
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { display: true, color: gridColor },
-                            ticks: { color: textColor }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: textColor }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
+                findings.forEach(f => {
+                    // Default confidence if missing
+                    const conf = f.ai_confidence || 0.0;
+
+                    const row = `
+                        <tr class="hover:bg-gray-800/50 transition-colors">
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded text-xs font-bold ${f.severity === 'Critical' ? 'bg-red-500/20 text-red-500' :
+                            f.severity === 'High' ? 'bg-orange-500/20 text-orange-500' :
+                                'bg-yellow-500/20 text-yellow-500'
+                        }">${f.severity}</span>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs text-blue-400">${f.tool}</td>
+                            <td class="px-6 py-4 font-mono text-xs">${f.project}:${f.location}</td>
+                             <td class="px-6 py-4 font-mono text-xs text-gray-300 font-bold">${f.project}</td>
+                            <td class="px-6 py-4 text-white font-bold">${f.risk_score}</td>
+                             <td class="px-6 py-4">
+                                <div class="w-full bg-gray-700 rounded-full h-1.5 max-w-[80px]">
+                                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: ${conf * 100}%"></div>
+                                </div>
+                                <span class="text-[10px] text-gray-500">${(conf * 100).toFixed(0)}%</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="flex items-center">
+                                    ${f.verdict === 'TP' ? '🔴 TP' : '🟢 FP'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (e) {
+                console.error("Findings Error:", e);
+            }
+        }
+
+        // --- Projects Fetcher (Carousel) ---
+        async function fetchProjects() {
+            try {
+                const res = await fetch(`${API_BASE}/projects`);
+                const projects = await res.json();
+                const carousel = document.getElementById('repoCarousel');
+                carousel.innerHTML = "";
+
+                // "All Repos" Card
+                const allCard = document.createElement('div');
+                allCard.className = `cursor-pointer glass rounded-xl p-4 w-64 flex-shrink-0 border transition hover:border-blue-500 snap-center group relative overflow-hidden`;
+                allCard.dataset.repo = "";
+                allCard.onclick = () => selectRepo("");
+                allCard.innerHTML = `
+                    <div class="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition"></div>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="bg-blue-500/20 p-2 rounded-lg text-blue-400">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <h3 class="font-bold text-white">All Projects</h3>
+                    </div>
+                    <p class="text-xs text-gray-400">Global Overview</p>
+                `;
+                carousel.appendChild(allCard);
+
+                projects.forEach(p => {
+                    const card = document.createElement('div');
+                    // Highlight if active
+                    const borderClass = p.is_active ? 'border-green-500/50 shadow-lg shadow-green-900/20' : 'border-gray-700';
+                    card.className = `cursor-pointer bg-gray-800/50 rounded-xl p-4 w-64 flex-shrink-0 border ${borderClass} hover:border-blue-500 transition snap-center relative`;
+                    card.onclick = () => selectRepo(p.name);
+
+                    // Provider Icons (SVGs)
+                    const icons = {
+                        github: `<svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`,
+                        gitlab: `<svg class="w-8 h-8 text-orange-500" fill="currentColor" viewBox="0 0 24 24"><path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 4.82 2a.43.43 0 0 1 .58.03l2.82 3a.43.43 0 0 1 .11.32l-2.44 7.51L12 16.5l6.11-3.64-2.43-7.51a.43.43 0 0 1 .11-.32l2.82-3a.43.43 0 0 1 .58-.03.42.42 0 0 1 .11.16l2.44 7.51 1.22 3.78a.84.84 0 0 1-.3.94z"/></svg>`,
+                        jenkins: `<svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M16.64 12.56c-.34-.96-1.55-1.42-2.58-1.-1.02.43-1.41 1.63-1 2.59 1.32.75 3.19.49 4.31-.69.28-.29.47-.6.55-.91-.39.01-.84 0-1.28.01zm-5.71-3.32c-.17.16-.36.31-.56.45-.64.44-1.43.62-2.18.51-1.07-.16-1.95-.91-2.27-1.93-.32-1.03.04-2.15.93-2.82.72-.54 1.68-.61 2.49-.24.81.38 1.41 1.15 1.58 2.03.07.38.05.77-.04 1.15.02.29.03.57.05.85zm-4.46 9.3c.66.44 1.47.58 2.25.41 1.08-.24 1.95-1.06 2.19-2.13.23-1.06-.21-2.15-1.12-2.75-.75-.49-1.7-.5-2.47-.07-.77.43-1.31 1.24-1.41 2.12-.05.41.01.81.16 1.19.14.41.27.83.4 1.23zM21.75 9c-.31-1.06-.59-2.12-.83-3.19-2.61.08-5.2-.2-7.81-.19-.46 2.37-1.37 4.67-2.67 6.72-.46-.35-.9-.72-1.32-1.11 3.29-4.8 3.51-11.23.47-15.68L4.05 1.7C2.7 3.97 3 6.88 4.7 8.85c.16.19.34.37.53.54-1.26.15-2.48.6-3.56 1.31.25.47.5.94.75 1.41 1.25-.8 2.76-1.18 4.25-1.02.26 1.59.18 3.24-.26 4.79-.17.06-.35.12-.53.16-1.23.3-2.52.12-3.62-.51l-.73 1.42c1.47.88 3.22 1.09 4.85.64.91-.25 1.76-.73 2.45-1.37.53.5 1.1.96 1.71 1.37-1.09 1.19-2.64 1.89-4.25 1.93-.32.01-.64-.01-.95-.06.18.5.36 1.01.54 1.51 2.36.08 4.64-.93 6.03-2.82 2.38 1.42 5.09 2.17 7.84 2.17.61-4.04 1.24-8.08 1.97-12.08-.05-.02-.1-.03-.15-.04z"/></svg>`
+                    };
+
+                    let icon = icons.github; // default
+                    if ((p.provider || "").includes("gitlab")) icon = icons.gitlab;
+                    if ((p.provider || "").includes("jenkins")) icon = icons.jenkins;
+
+                    // Active Indicator
+                    const activeBadge = p.is_active ?
+                        `<span class="absolute top-2 right-2 flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>` : '';
+
+                    const timeLabel = p.is_active ? "Running Now" : new Date(p.last_run).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    card.innerHTML = `
+                        ${activeBadge}
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="opacity-90">${icon}</div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm truncate w-32" title="${p.name}">${p.name}</h3>
+                                <p class="text-[10px] text-gray-400 font-mono">🌿 ${p.branch}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-500 mt-2">
+                             <span class="bg-gray-700/50 px-1.5 py-0.5 rounded text-[10px]">${p.provider}</span>
+                             <span class="text-gray-400 font-mono">${timeLabel}</span>
+                        </div>
+                    `;
+                    carousel.appendChild(card);
+                });
+
+            } catch (e) {
+                console.error("Projects list error:", e);
+            }
+        }
+
+        function selectRepo(repoName) {
+            document.getElementById('repoFilter').value = repoName;
+
+            // Visual selection state
+            const cards = document.querySelectorAll('#repoCarousel > div');
+            cards.forEach(c => {
+                if (c.dataset.repo === repoName || (repoName === "" && c.dataset.repo === "")) {
+                    c.classList.add('ring-2', 'ring-blue-500');
+                } else if (c.textContent.includes(repoName) && repoName !== "") { // Fuzzy match for generated cards
+                    c.classList.add('ring-2', 'ring-blue-500');
+                } else {
+                    c.classList.remove('ring-2', 'ring-blue-500');
                 }
             });
 
-            // AI Chart
-            const ctxAi = document.getElementById('aiChart').getContext('2d');
-            aiChartInstance = new Chart(ctxAi, {
-                type: 'doughnut',
+            fetchStats(repoName);
+            fetchFindings(repoName);
+        }
+
+        function scrollCarousel(direction) {
+            const container = document.getElementById('repoCarousel');
+            const scrollAmount = 300; // Approx card width + gap
+            container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+        }
+
+        // --- Chart Logic ---
+        function updateCharts(data) {
+
+
+            // 1. Trend Chart (Line)
+            const ctxRisk = document.getElementById('riskChart').getContext('2d');
+            const trend = data.devsecops_metrics.trend_data || { labels: [], critical: [], high: [], medium: [] };
+
+            if (riskChart) riskChart.destroy();
+            riskChart = new Chart(ctxRisk, {
+                type: 'line',
                 data: {
-                    labels: ['True Positives', 'False Positives', 'Auto-Fixed'],
-                    datasets: [{
-                        data: [
-                            data.total_findings - data.ai_metrics.false_positives,
-                            data.ai_metrics.false_positives,
-                            data.ai_metrics.auto_fixed
-                        ],
-                        backgroundColor: ['#10b981', '#f43f5e', '#3b82f6'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
+                    labels: trend.labels,
+                    datasets: [
+                        {
+                            label: 'Critical',
+                            data: trend.critical,
+                            borderColor: '#ef4444', // Red
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'High',
+                            data: trend.high,
+                            borderColor: '#f97316', // Orange
+                            backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Medium',
+                            data: trend.medium,
+                            borderColor: '#eab308', // Yellow
+                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
                     plugins: {
-                        legend: { position: 'right', labels: { color: textColor } }
+                        legend: { position: 'top', labels: { color: 'white' } }
+                    },
+                    elements: {
+                        point: { radius: 3 }
                     }
                 }
             });
 
-            updateChartsTheme();
+            // 2. CI Distribution (Doughnut)
+            const ctxCi = document.getElementById('ciChart').getContext('2d');
+            const ciData = data.devsecops_metrics.ci_distribution || {};
+
+            if (ciChart) ciChart.destroy();
+            ciChart = new Chart(ctxCi, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(ciData),
+                    datasets: [{
+                        data: Object.values(ciData),
+                        backgroundColor: ['#3b82f6', '#ec4899', '#f59e0b', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: 'white' } }
+                    }
+                }
+            });
         }
 
-        function updateChartsTheme() {
-            if (!severityChartInstance || !aiChartInstance) return;
+        // --- Listeners ---
 
-            const isDark = html.classList.contains('dark');
-            const textColor = isDark ? '#fff' : '#000';
-            const barColor = isDark ? '#fff' : '#000';
-            const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
 
-            // Update Severity
-            severityChartInstance.options.scales.x.ticks.color = textColor;
-            severityChartInstance.options.scales.y.ticks.color = textColor;
-            severityChartInstance.options.scales.y.grid.color = gridColor;
-            severityChartInstance.data.datasets[0].backgroundColor = barColor; // Monochrome bars
-            severityChartInstance.update();
-
-            aiChartInstance.update();
-        }
-
-        async function fetchFindings() {
-            try {
-                const response = await fetch('/api/findings');
-                const findings = await response.json();
-
-                const tbody = document.getElementById('findings-table-body');
-                tbody.innerHTML = ''; // Clear loading
-
-                findings.forEach(f => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
-
-                    // Severity Badge Color
-                    let sevColor = 'bg-gray-500';
-                    if (f.severity === 'Critical') sevColor = 'bg-red-500';
-                    else if (f.severity === 'High') sevColor = 'bg-orange-500';
-                    else if (f.severity === 'Medium') sevColor = 'bg-yellow-500';
-
-                    row.innerHTML = `
-                        <td class="py-4 pl-4 font-medium">${f.tool}</td>
-                        <td class="py-4">
-                            <span class="px-2 py-1 rounded text-[10px] font-bold uppercase text-white ${sevColor}">${f.severity}</span>
-                        </td>
-                        <td class="py-4 font-mono">${f.risk_score.toFixed(1)}</td>
-                        <td class="py-4 opacity-70 truncate max-w-[200px]">${f.location}</td>
-                        <td class="py-4 pr-4 text-right">
-                             <span class="text-xs font-bold ${f.verdict === 'TP' ? 'text-red-400' : 'text-gray-400'}">${f.verdict || 'N/A'}</span>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-            } catch (error) {
-                console.error('Error fetching findings:', error);
-            }
-        }
-
+        // --- Init ---
+        fetchProjects();
         fetchStats();
         fetchFindings();
+
+        // Auto-refresh every 5s
+        setInterval(() => {
+            const repo = document.getElementById('repoFilter').value;
+            fetchStats(repo);
+            fetchFindings(repo);
+            // Refresh projects periodically to update "Last Run" and Pulse
+            fetchProjects();
+        }, 5000);
+
     </script>
 </body>
 

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+sqlalchemy
+psycopg2-binary
+scikit-learn
+numpy
+requests
+langchain-openai
+langchain-core

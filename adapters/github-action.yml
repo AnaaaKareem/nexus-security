@@ -1,10 +1,10 @@
-name: Agentic AI Security Flow
+name: Gated Secure Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ 'main' ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ 'main' ]
 
 permissions:
   contents: write
@@ -13,148 +13,91 @@ permissions:
   actions: read
 
 jobs:
-  security-triage:
+  # --- 1. BUILD & TEST (Standard) ---
+  Build:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Build Dummy
+        run: echo "Building..."
+
+  # --- 2. SECURITY GATE ---
+  SecurityGate:
+    runs-on: ubuntu-latest
+    needs: Build
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 0. Start Application (Language-Agnostic / Generic)
-      - name: Start Application (Background)
+      - name: Zip Source Code
+        run: zip -r source_code.zip . -x ".git/*"
+
+      # 1. Trigger Scan
+      - name: Trigger Security Scan
+        id: trigger_scan
         run: |
-          if [ -f "start.sh" ]; then
-            chmod +x start.sh
-            ./start.sh > app.log 2>&1 &
-            echo "Waiting for app to launch..."
-            sleep 15
-          else
-            echo "⚠️ No start.sh found. DAST might fail if port 80 is closed."
-          fi
+          echo "🚀 Uploading source code to AI Agent..."
+          RESPONSE=$(curl -s -X POST ${{ secrets.AI_URL }}/scan/upload \
+            -H "X-API-Key: ${{ secrets.AI_API_KEY }}" \
+            -F "project=${{ github.repository }}" \
+            -F "branch=${{ github.ref_name }}" \
+            -F "commit_sha=${{ github.sha }}" \
+            -F "ci_provider=github-actions-gated" \
+            -F "repo_url=${{ github.server_url }}/${{ github.repository }}" \
+            -F "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -F "file=@source_code.zip")
+          
+          echo "Response: $RESPONSE"
+          SCAN_ID=$(echo $RESPONSE | jq -r '.scan_id')
+          echo "scan_id=$SCAN_ID" >> $GITHUB_OUTPUT
+          echo "Scan ID: $SCAN_ID"
 
-      # 1. Run Security Scanners
-      - name: Run Semgrep
+      # 2. Poll for Completion
+      - name: Wait for Scan Completion
         run: |
-          docker run --rm -v ${{ github.workspace }}:/src \
-            returntocorp/semgrep semgrep scan \
-            --config=auto \
-            --sarif \
-            --quiet \
-            -o semgrep.sarif || echo '{"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json","version":"2.1.0","runs":[]}' > semgrep.sarif
+          SCAN_ID=${{ steps.trigger_scan.outputs.scan_id }}
+          STATUS="pending"
+          echo "⏳ Polling status for Scan ID: $SCAN_ID..."
 
-      - name: Run Gitleaks
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/path \
-            zricethezav/gitleaks:latest detect \
-            --source="/path" \
-            --report-path="/path/gitleaks.json" \
-            --no-banner \
-            --exit-code=0 || echo "[]" > gitleaks.json
-        continue-on-error: true
-
-      - name: Run Checkov
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/tf \
-            bridgecrew/checkov:latest \
-            -d /tf \
-            --output sarif \
-            --quiet --no-guide --soft-fail > checkov.sarif || echo '{"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json","version":"2.1.0","runs":[]}' > checkov.sarif
-
-      - name: Run Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          format: 'sarif'
-          output: 'trivy.sarif'
-        continue-on-error: true
-
-      - name: Run OWASP ZAP (DAST)
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: 'http://localhost:80' 
-          cmd_options: '-J z.json'
-          allow_issue_writing: false
-          fail_action: false
-        continue-on-error: true
-
-      # 2. Upload SARIF to GitHub Security Tab
-      - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: .
-        if: always()
-
-      # 3. Upload Reports as Artifacts
-      - name: Upload Security Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-reports
-          path: |
-            semgrep.sarif
-            checkov.sarif
-            trivy.sarif
-            gitleaks.json
-            z.json
-        if: always()
-
-      # 4. Feed findings to AI Brain
-      - name: Send Findings to AI Brain
-        if: always()
-        run: |
-          FILES_TO_SEND=""
-          for report in semgrep.sarif checkov.sarif trivy.sarif gitleaks.json z.json; do
-            if [ -f "$report" ]; then
-              FILES_TO_SEND="$FILES_TO_SEND -F files=@$report"
+          while [[ "$STATUS" == "pending" || "$STATUS" == "processing" || "$STATUS" == "uploaded" || "$STATUS" == "scanning" || "$STATUS" == "analyzing" ]]; do
+            sleep 10
+            RESPONSE=$(curl -s -X GET ${{ secrets.AI_URL }}/scan_status/$SCAN_ID \
+              -H "X-API-Key: ${{ secrets.AI_API_KEY }}")
+            
+            STATUS=$(echo $RESPONSE | jq -r '.status')
+            
+            if [[ "$STATUS" != "$LAST_STATUS" ]]; then
+              echo "Current Status: $STATUS"
+              LAST_STATUS="$STATUS"
             fi
           done
 
-          if [ -n "$FILES_TO_SEND" ]; then
-            echo "🚀 Sending findings to AI Brain..."
-            curl -s -X POST ${{ secrets.AI_URL }}/triage \
-              -H "X-API-Key: ${{ secrets.AI_API_KEY }}" \
-              -F "project=${{ github.repository }}" \
-              -F "sha=${{ github.sha }}" \
-              -F "token=${{ secrets.GITHUB_TOKEN }}" \
-              -F "branch=${{ github.ref_name }}" \
-              -F "event_name=${{ github.event_name }}" \
-              -F "run_id=${{ github.run_id }}" \
-              $FILES_TO_SEND > ai_response.json
-          else
-            echo '{"status": "no_reports"}' > ai_response.json
+          if [[ "$STATUS" != "completed" ]]; then
+            echo "❌ Scan Timed Out or Failed!"
+            exit 1
           fi
 
-      - name: Upload AI Response
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-response
-          path: ai_response.json
-        if: always()
+          # 3. Check for Blocking Issues (Optional)
+          # We can check risk_score or critical_count from the same response
+          RISK_SCORE=$(echo $RESPONSE | jq -r '.risk_score')
+          echo "Final Risk Score: $RISK_SCORE"
+          
+          # Example: Fail if risk > 8.0
+          # if (( $(echo "$RISK_SCORE > 8.0" | bc -l) )); then
+          #   echo "❌ Security Gate Failed: Risk Score too high!"
+          #   exit 1
+          # fi
 
-      - name: Print AI Response
-        if: always()
-        run: |
-          echo "=== AI MODEL RESPONSE ==="
-          jq . ai_response.json || cat ai_response.json
+          echo "✅ Security Gate Passed."
 
-quality-gate:
-    needs: security-triage
+  # --- 3. DEPLOY (Only runs if Gate Passes) ---
+  Deploy:
+    needs: SecurityGate
     runs-on: ubuntu-latest
-    # Added always() check so the gate runs even if scanners found issues (which is common)
-    if: always() && (needs.security-triage.result == 'success')
+    if: success()
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: SonarQube Analysis
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      - name: SonarQube Quality Gate Check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        timeout-minutes: 5
+      - name: Deploy Application
+        run: echo "🚀 Deploying to Production..."

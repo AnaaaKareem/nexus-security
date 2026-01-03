@@ -1,57 +1,68 @@
 pipeline {
     agent any
     stages {
-        stage('AI Feed (Fast Scans)') {
+        stage('Offload Scan') {
             steps {
                 script {
-                    // 0. Start Application (Background)
+                    // 0. App is assumed running on AI_BRAIN_URL
+
+                    // 1. Zip
+                    sh "zip -r source_code.zip . -x '.git/*'"
+
+                    // 2. Upload
                     sh """
-                        if [ -f "start.sh" ]; then
-                            chmod +x start.sh
-                            ./start.sh > app.log 2>&1 &
-                            echo "Waiting for app to launch..."
-                            sleep 15
-                        else
-                            echo "⚠️ No start.sh found. DAST might fail if port 80 is closed."
+                        echo "🚀 Uploading source code to AI Agent..."
+                        curl -s -X POST ${AI_BRAIN_URL}/scan/upload \
+                            -H "X-API-Key: ${AI_API_KEY}" \
+                            -F "project=${JOB_NAME}" \
+                            -F "branch=${BRANCH_NAME}" \
+                            -F "commit_sha=${GIT_COMMIT}" \
+                            -F "ci_provider=jenkins" \
+                            -F "repo_url=${GIT_URL}" \
+                            -F "run_url=${BUILD_URL}" \
+                            -F "file=@source_code.zip" > scan_response.json
+                        
+                        echo "=== SCAN RESPONSE ==="
+                        cat scan_response.json
+                    """
+                    archiveArtifacts artifacts: 'scan_response.json', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Security Gate') {
+            steps {
+                script {
+                    def scanId = sh(script: "cat scan_response.json | jq -r '.scan_id'", returnStdout: true).trim()
+                    echo "🔍 Starting Security Gate for Scan ID: ${scanId}"
+                    
+                    sh """
+                        STATUS="pending"
+                        LAST_STATUS=""
+                        
+                        # Poll indefinitely
+                        while [[ "\$STATUS" == "pending" || "\$STATUS" == "processing" || "\$STATUS" == "uploaded" || "\$STATUS" == "scanning" || "\$STATUS" == "analyzing" ]]; do
+                            sleep 10
+                            RESPONSE=\$(curl -s -X GET ${AI_BRAIN_URL}/scan_status/${scanId} -H "X-API-Key: ${AI_API_KEY}")
+                            STATUS=\$(echo \$RESPONSE | jq -r '.status')
+                            
+                            if [[ "\$STATUS" != "\$LAST_STATUS" ]]; then
+                                echo "Current Status: \$STATUS"
+                                LAST_STATUS="\$STATUS"
+                            fi
+                        done
+                        
+                        if [[ "\$STATUS" != "completed" ]]; then
+                            echo "❌ Scan Failed!"
+                            exit 1
                         fi
+                        echo "✅ Security Gate Passed."
+                        
+                        # 3. Check for Blocking Issues
+                        RISK_SCORE=\$(echo \$RESPONSE | jq -r '.risk_score')
+                        echo "Final Risk Score: \$RISK_SCORE"
                     """
                 }
-
-                parallel(
-                    "SAST": { sh "docker run --rm -v ${WORKSPACE}:/src semgrep/semgrep semgrep scan --config=auto --sarif --quiet -o semgrep.sarif" },
-                    "Secrets": { sh "docker run --rm -v ${WORKSPACE}:/path zricethezav/gitleaks:latest detect --source='/path' --report-path='/path/gitleaks.json' --no-banner --exit-code=0" },
-                    "IaC": { sh "docker run --rm -v ${WORKSPACE}:/tf bridgecrew/checkov:latest -d /tf --output sarif --quiet --soft-fail > checkov.sarif" },
-                    "SCA": { sh "docker run --rm -v ${WORKSPACE}:/root/ aquasec/trivy:latest fs /root/ --format sarif --output trivy.sarif" },
-                    "DAST": { sh "docker run --rm -v ${WORKSPACE}:/zap/wrk/:/zap/wrk/ --network=host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:80 -J z.json || true" }
-                )
-
-                // Trigger AI Brain immediately
-                sh """
-                    FILES_TO_SEND=""
-                    for report in semgrep.sarif checkov.sarif trivy.sarif gitleaks.json z.json; do
-                        if [ -f "\$report" ]; then
-                            FILES_TO_SEND="\$FILES_TO_SEND -F files=@\$report"
-                        fi
-                    done
-
-                    if [ -n "\$FILES_TO_SEND" ]; then
-                        echo "🚀 Sending findings to AI Brain..."
-                        curl -s -X POST ${AI_BRAIN_URL}/triage \
-                            -H "Authorization: Bearer ${AI_API_KEY}" \
-                            -F "project=${JOB_NAME}" \
-                            -F "commit_sha=${GIT_COMMIT}" \
-                            -F "branch=${BRANCH_NAME}" \
-                            -F "event_name=push" \
-                            -F "run_id=${BUILD_ID}" \
-                            \$FILES_TO_SEND > ai_response.json
-                    else
-                        echo '{"status": "no_reports"}' > ai_response.json
-                    fi
-                    
-                    echo "=== AI MODEL RESPONSE ==="
-                    cat ai_response.json
-                """
-                archiveArtifacts artifacts: 'semgrep.sarif, gitleaks.json, checkov.sarif, trivy.sarif, z.json, ai_response.json', allowEmptyArchive: true
             }
         }
         stage('Background Quality Audit') {

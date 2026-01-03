@@ -1,5 +1,5 @@
 services:
-  # Database for results and feedback
+  # Database
   db:
     image: postgres:15.14-alpine3.21
     environment:
@@ -10,29 +10,112 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d security_brain"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # The AI Security Brain API
-  api:
-    build: ./ai-agent
+  # Redis
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+
+  # Orchestrator (formerly api)
+  orchestrator:
+    build: 
+      context: .
+      dockerfile: services/orchestrator/Dockerfile
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/security_brain
-      - GITHUB_TOKEN=${GITHUB_TOKEN} # Needed for PR creation
+      - REDIS_URL=redis://redis:6379/0
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_MODEL=${LLM_MODEL}
       - LLM_API_KEY=${LLM_API_KEY}
       - AI_API_KEY=${AI_API_KEY}
+      - SCANNER_SERVICE_URL=http://scanner:8000
+      - ANALYSIS_SERVICE_URL=http://analysis:8000
+      - REMEDIATION_SERVICE_URL=http://remediation:8000
+      - SANDBOX_SERVICE_URL=http://sandbox:8000
     volumes:
-      - ./ai-agent:/app
-      - /var/run/docker.sock:/var/run/docker.sock # Grants sandbox.py access to Docker
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - scan_artifacts:/tmp/scans
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      scanner:
+        condition: service_started
+      analysis:
+        condition: service_started
+      remediation:
+        condition: service_started
+      sandbox:
+        condition: service_started
 
-  # Dashboard Microservice (New)
+  # Scanner Service
+  scanner:
+    build:
+      context: .
+      dockerfile: services/scanner/Dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - scan_artifacts:/tmp/scans
+
+  # Analysis Service
+  analysis:
+    build:
+      context: .
+      dockerfile: services/analysis/Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LOG_LEVEL=INFO
+
+  # Remediation Service
+  remediation:
+    build:
+      context: .
+      dockerfile: services/remediation/Dockerfile
+    ports:
+      - "8004:8000"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_API_KEY=${LLM_API_KEY}
+
+  # Sandbox Service
+  sandbox:
+    build:
+      context: .
+      dockerfile: services/sandbox/Dockerfile
+    ports:
+      - "8005:8000"
+    environment:
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_API_KEY=${LLM_API_KEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - scan_artifacts:/tmp/scans
+
+  # Dashboard
   dashboard:
-    build: ./dashboard
+    build: 
+      context: .
+      dockerfile: dashboard/Dockerfile
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
     ports:
       - "8001:8001"
@@ -41,15 +124,85 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - ./dashboard:/app
+      - ./services/common/core:/app/core # Updated to point to new common core if needed? 
+      # Actually dashboard reused ai-agent/core. 
+      # I should copy services/common/core to dashboard or mount it.
+      # Let's mount services/common/core to /app/core IF dashboard expects core at /app/core.
+      # Dashboard likely imports from `core.database`. 
+      # `services/common/core` contains `database.py`. 
+      # So mounting `./services/common/core:/app/core` should work.
     depends_on:
       - db
       - redis
 
-  # Redis Cache (New)
-  redis:
-    image: redis:6-alpine
+  # Observability
+  grafana:
+    image: grafana/grafana:latest
     ports:
-      - "6379:6379"
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - loki
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  # Security Tools (Sidecars for Scanner/Sandbox?)
+  # Actually Scanner Service runs them via docker exec or run.
+  # So we just keep them here running as daemons or let Scanner/Sandbox spawn them explicitly.
+  # Scanner.py used 'semgrep' container by name. So we MUST run them here.
+  
+  semgrep:
+    image: returntocorp/semgrep
+    container_name: semgrep
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - scan_artifacts:/tmp/scans
+      
+  gitleaks:
+    image: zricethezav/gitleaks:latest
+    container_name: gitleaks
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - scan_artifacts:/tmp/scans
+
+  checkov:
+    image: bridgecrew/checkov:latest
+    container_name: checkov
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - scan_artifacts:/tmp/scans
+
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: trivy
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - scan_artifacts:/tmp/scans
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - scan_artifacts:/zap/wrk:rw
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:
+  scan_artifacts:

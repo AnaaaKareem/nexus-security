@@ -1,0 +1,21 @@
+fastapi
+uvicorn[standard]
+python-multipart
+sqlalchemy
+psycopg2-binary
+pydantic
+langgraph
+langchain-openai
+langchain-core
+docker
+pygithub
+# Optional for Training:
+# datasets
+# transformers
+# unsloth
+aiohttp>=3.10.2
+python-dotenv
+scikit-learn
+redis
+jinja2
+celery

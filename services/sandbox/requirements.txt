@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+docker
+langchain-openai
+langchain-core
+semgrep
+python-multipart

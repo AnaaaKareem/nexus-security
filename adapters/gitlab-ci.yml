@@ -1,64 +1,81 @@
 stages:
   - fast-scan
+  - gate
   - triage
   - quality-audit
 
 # 1. Run all fast tools in parallel
-# 1. Run all fast tools in parallel
-run-scanners:
+# 1. Zip & Upload to AI Agent (Server-Side Scan)
+offload-scan:
   stage: fast-scan
-  image: docker:latest
+  image: ubuntu:latest
+  before_script:
+    - apt-get update && apt-get install -y zip curl
   script:
-    # 0. Start Application (Background) - matching GH Actions logic
-    - |
-      if [ -f "start.sh" ]; then
-        chmod +x start.sh
-        ./start.sh > app.log 2>&1 &
-        echo "Waiting for app to launch..."
-        sleep 15
-      else
-        echo "⚠️ No start.sh found. DAST might fail if port 80 is closed."
-      fi
+    # 0. Prepare
+    # App is assumed running on AI_BRAIN_URL
 
-    # 1. Run Scanners
-    - docker run --rm -v $PWD:/src semgrep/semgrep semgrep scan --config=auto --sarif --quiet -o semgrep.sarif &
-    - docker run --rm -v $PWD:/path zricethezav/gitleaks:latest detect --source="/path" --report-path="/path/gitleaks.json" --no-banner --exit-code=0 &
-    - docker run --rm -v $PWD:/tf bridgecrew/checkov:latest -d /tf --output sarif --quiet --soft-fail > checkov.sarif &
-    - docker run --rm -v $PWD:/root/ aquasec/trivy:latest fs /root/ --format sarif --output trivy.sarif &
-    - docker run --rm -v $PWD:/zap/wrk/:/zap/wrk/ --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:80 -J z.json || true &
-    - wait
+    # 1. Zip
+    - zip -r source_code.zip . -x ".git/*"
+
+    # 2. Upload
+    - |
+      echo "🚀 Uploading source code to AI Agent..."
+      curl -s -X POST $AI_BRAIN_URL/scan/upload \
+        -H "X-API-Key: $AI_API_KEY" \
+        -F "project=$CI_PROJECT_PATH" \
+        -F "branch=$CI_COMMIT_REF_NAME" \
+        -F "commit_sha=$CI_COMMIT_SHA" \
+        -F "ci_provider=gitlab-ci" \
+        -F "repo_url=$CI_PROJECT_URL" \
+        -F "run_url=$CI_JOB_URL" \
+        -F "file=@source_code.zip" > scan_response.json
+
+    - cat scan_response.json
 
   artifacts:
-    paths: [semgrep.sarif, gitleaks.json, checkov.sarif, trivy.sarif, z.json, ai_response.json]
+    paths: [scan_response.json]
 
-# 2. Push to AI Brain to trigger agentic remediation
-ai-brain-triage:
-  stage: triage
+# 2. Security Gate (Polls for completion)
+security-gate:
+  stage: gate
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
   script:
+    - echo "🔍 Starting Security Gate..."
+    - SCAN_ID=$(cat scan_response.json | jq -r '.scan_id')
+    - echo "Monitoring Scan ID $SCAN_ID"
+    
+    - STATUS="pending"
+    - LAST_STATUS=""
+    
+    # Poll indefinitely until completion
     - |
-      FILES_TO_SEND=""
-      for report in semgrep.sarif checkov.sarif trivy.sarif gitleaks.json z.json; do
-        if [ -f "$report" ]; then
-          FILES_TO_SEND="$FILES_TO_SEND -F files=@$report"
+      while [[ "$STATUS" == "pending" || "$STATUS" == "processing" || "$STATUS" == "uploaded" || "$STATUS" == "scanning" || "$STATUS" == "analyzing" ]]; do
+        sleep 10
+        RESPONSE=$(curl -s -X GET $AI_BRAIN_URL/scan_status/$SCAN_ID -H "X-API-Key: $AI_API_KEY")
+        STATUS=$(echo $RESPONSE | jq -r '.status')
+        
+        if [[ "$STATUS" != "$LAST_STATUS" ]]; then
+          echo "Current Status: $STATUS"
+          LAST_STATUS="$STATUS"
         fi
       done
 
-      if [ -n "$FILES_TO_SEND" ]; then
-        echo "🚀 Sending findings to AI Brain..."
-        curl -s -X POST $AI_BRAIN_URL/triage \
-          -H "Authorization: Bearer $AI_API_KEY" \
-          -F "project=$CI_PROJECT_PATH" \
-          -F "commit_sha=$CI_COMMIT_SHA" \
-          -F "branch=$CI_COMMIT_REF_NAME" \
-          -F "event_name=$CI_PIPELINE_SOURCE" \
-          -F "run_id=$CI_PIPELINE_ID" \
-          $FILES_TO_SEND > ai_response.json
-      else
-        echo '{"status": "no_reports"}' > ai_response.json
+    - |
+      if [[ "$STATUS" != "completed" ]]; then
+        echo "❌ Scan Failed or Timed Out!"
+        exit 1
       fi
-
-      echo "=== AI MODEL RESPONSE ==="
-      cat ai_response.json
+      
+      echo "✅ Security Gate Passed."
+      
+      # 3. Check for Blocking Issues (Optional)
+      RISK_SCORE=$(echo $RESPONSE | jq -r '.risk_score')
+      echo "Final Risk Score: $RISK_SCORE"
+  dependencies:
+    - offload-scan
 
 # 3. SonarQube runs independently
 sonarqube-check:
