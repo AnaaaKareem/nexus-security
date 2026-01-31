@@ -38,6 +38,7 @@ class PrRequest(BaseModel):
     branch_name: Optional[str] = None                  # Target feature branch
     file_updates: Optional[List[Dict[str, Any]]] = None  # List of {path, content, message}
     issue_summary: Optional[str] = None                # PR description summary
+    ci_provider: Optional[str] = "github"              # 'github' or 'gitlab'
     
     # Single Fix mode (legacy compatibility)
     finding: Optional[Dict[str, Any]] = None           # Finding with fix content
@@ -121,7 +122,8 @@ def trigger_create_pr_http(req: PrRequest):
                 repo_name=req.repo_name,
                 branch_name=req.branch_name,
                 file_updates=req.file_updates,
-                issue_summary=req.issue_summary
+                issue_summary=req.issue_summary,
+                provider=req.ci_provider
             )
         else:
             # Case B: Single Fix - legacy endpoint for individual fixes

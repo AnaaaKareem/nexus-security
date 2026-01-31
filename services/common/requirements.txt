@@ -19,4 +19,3 @@ scikit-learn
 redis
 jinja2
 celery
-hvac>=2.1.0

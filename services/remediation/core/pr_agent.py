@@ -14,13 +14,21 @@ from common.core.secrets import get_github_token
 
 logger = get_logger(__name__)
 
-def create_consolidated_pr(repo_name, branch_name, file_updates, issue_summary):
+from core.gitlab_agent import create_consolidated_mr_gitlab
+
+def create_consolidated_pr(repo_name, branch_name, file_updates, issue_summary, provider="github"):
     """
-    Creates or updates a single Pull Request containing multiple file updates.
+    Creates or updates a single Pull/Merge Request containing multiple file updates.
     
     OPTIMIZATION: Uses a stable branch name if provided, or defaults to the passed one.
     If the branch exists, it appends commits. If a PR exists, it updates it.
+    
+    Args:
+        provider (str): 'github' or 'gitlab' (default: 'github')
     """
+    if provider and provider.lower() in ["gitlab", "gitlab-ci"]:
+        return create_consolidated_mr_gitlab(repo_name, branch_name, file_updates, issue_summary)
+
     token = get_github_token()
     if not token:
         logger.error("GITHUB_TOKEN not found in Vault or environment")
@@ -174,7 +182,7 @@ def create_security_pr(repo_name, branch_name, patch_content, file_path, issue_m
     
     # Delegate to the consolidated handler
     # Note: create_consolidated_pr will override branch_name with STABLE_BRANCH
-    return create_consolidated_pr(repo_name, branch_name, file_updates, issue_message)
+    return create_consolidated_pr(repo_name, branch_name, file_updates, issue_message, provider="github")
 
 def create_pr_for_fix(finding, project, branch="main"):
     """

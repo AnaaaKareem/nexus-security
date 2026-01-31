@@ -54,22 +54,17 @@ services:
       - ANALYSIS_SERVICE_URL=http://analysis:8000
       - REMEDIATION_SERVICE_URL=http://remediation:8000
       - SERVICE_NAME=orchestrator
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
 
     volumes:
       - ./logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - scan_artifacts:/tmp/scans
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-      vault:
-        condition: service_healthy
       scanner:
         condition: service_started
       analysis:
@@ -95,14 +90,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - scan_artifacts:/tmp/scans
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
     environment:
       - SERVICE_NAME=scanner
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
-    depends_on:
-      vault:
-        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -124,11 +113,6 @@ services:
       - SKIP_MODEL_CHECK=true
       - LOG_LEVEL=INFO
       - SERVICE_NAME=analysis
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
-    depends_on:
-      vault:
-        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -137,7 +121,6 @@ services:
     volumes:
       - ./ml:/app/ml:ro
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
 
   # Remediation Service
   remediation:
@@ -149,7 +132,6 @@ services:
       - "8004:8000"
     volumes:
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - LLM_BASE_URL=${LLM_BASE_URL}
@@ -157,11 +139,6 @@ services:
       - LLM_API_KEY=${LLM_API_KEY}
       - SKIP_MODEL_CHECK=true
       - SERVICE_NAME=remediation
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
-    depends_on:
-      vault:
-        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -181,17 +158,13 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/security_brain
       - REDIS_URL=redis://redis:6379/0
       - SERVICE_NAME=dashboard
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
     volumes:
       - ./services/dashboard:/app
       - ./services/common/core:/app/core
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
     depends_on:
       - db
       - redis
-      - vault
     deploy:
       resources:
         limits:
@@ -209,20 +182,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - scan_artifacts:/tmp/scans
       - shared_logs:/app/logs
-      - vault_data:/vault/data:ro
     environment:
       - SERVICE_NAME=sandbox
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_MODEL=${LLM_MODEL}
       - LLM_API_KEY=${LLM_API_KEY}
       - AI_API_KEY=${AI_API_KEY}
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_ENABLED=true
-    depends_on:
-      vault:
-        condition: service_healthy
-
-  # Observability
   grafana:
     image: grafana/grafana:latest
     restart: always
@@ -343,30 +308,6 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
 
-  # HashiCorp Vault - Secret Management
-  vault:
-    image: hashicorp/vault:latest
-    user: root
-    restart: always
-    ports:
-      - "8200:8200"
-    environment:
-      - VAULT_ADDR=http://127.0.0.1:8200
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - vault_data:/vault/data
-      - ./vault/config.hcl:/vault/config/config.hcl:ro
-      - ./vault/entrypoint.sh:/vault/entrypoint.sh:ro
-      - ./.env:/vault/env/.env:ro
-    entrypoint: [ "/bin/sh", "/vault/entrypoint.sh" ]
-    healthcheck:
-      test: [ "CMD-SHELL", "vault status || [ $? -eq 2 ]" ]
-      interval: 10s
-      timeout: 10s
-      retries: 15
-      start_period: 90s
-
   # Orchestrator Worker (Celery)
   orchestrator-worker:
     build:
@@ -402,6 +343,5 @@ volumes:
   postgres_data:
   scan_artifacts:
   shared_logs:
-  vault_data:
 
 
