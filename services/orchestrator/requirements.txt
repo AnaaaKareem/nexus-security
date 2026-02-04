@@ -9,14 +9,8 @@ langchain-openai
 langchain-core
 httpx
 redis
-
 jinja2
-
 python-multipart
 docker
 celery
 amqp
-
-
-
-hvac>=2.1.0

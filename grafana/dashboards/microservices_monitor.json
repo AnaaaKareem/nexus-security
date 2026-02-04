@@ -1230,7 +1230,7 @@
             },
             "targets": [
                 {
-                    "expr": "{job=\"app-logs\"} |= \"INFO\" |!= \"ERROR\" |!= \"WARNING\"",
+                    "expr": "{job=\"app-logs\"} |= \"INFO\" != \"ERROR\" != \"WARNING\"",
                     "refId": "A"
                 }
             ],

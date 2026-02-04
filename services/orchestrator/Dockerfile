@@ -6,7 +6,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 COPY services/orchestrator/requirements.txt .
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 
 # Copy common (shared code)
 COPY services/common /app/common

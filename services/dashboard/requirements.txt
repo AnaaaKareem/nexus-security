@@ -9,14 +9,8 @@ langchain-openai
 langchain-core
 docker
 pygithub
-# Optional for Training:
-# datasets
-# transformers
-# unsloth
 aiohttp>=3.10.2
 python-dotenv
 scikit-learn
 redis
 jinja2
-
-hvac>=2.1.0

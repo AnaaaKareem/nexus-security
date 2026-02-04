@@ -30,13 +30,19 @@ logger = get_logger(__name__)
 
 # LLM Configuration from Vault
 llm_config = get_llm_config()
+# Determine model and kwargs
+model = llm_config.get("model", "deepseek-coder-v2-lite")
+model_kwargs = {}
+if "kimi" in model.lower():
+    model_kwargs["extra_body"] = {"chat_template_kwargs": {"thinking": True}}
+
 llm = ChatOpenAI(
     base_url=llm_config.get("base_url", "http://localhost:1234/v1"),
     api_key=llm_config.get("api_key", "lm-studio"),
-    default_headers={"X-API-Key": llm_config.get("api_key", "lm-studio")},
-    model=llm_config.get("model", "deepseek-coder-v2-lite"),
+    model=model,
+    model_kwargs=model_kwargs,
     temperature=0.1,
-    timeout=300
+    timeout=int(llm_config.get("timeout", 600))
 )
 
 def run_red_team_attack(finding: Dict[str, Any], project: str, source_path: str) -> Dict[str, Any]:

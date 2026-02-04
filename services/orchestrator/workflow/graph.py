@@ -769,7 +769,7 @@ def node_red_team(state):
             logger.debug(f"   🔥 Launching Red Team attack for {finding.get('rule_id')}...")
             payload = {"finding": finding, "project": project, "source_path": state.get("source_path", "/tmp")}
             
-            result = call_service(SANDBOX_URL, "red_team", payload, timeout=120)
+            result = call_service(SANDBOX_URL, "red_team", payload, timeout=600)
             
             if result and result.get("success"):
                 logger.info(f"   ⚠️ EXPLOIT SUCCESS: {finding.get('id')} was exploited!")
@@ -943,7 +943,13 @@ import subprocess
 
 def resolve_source_file(url: str, source_path: str) -> str:
     """
-    Attempts to map a DAST URL to a local source file using 'Search & Narrow' strategy.
+    Dynamically maps a DAST URL to a local source file using multiple strategies.
+    
+    Strategies (in order):
+    1. File Path Match - Check if URL path matches a file path directly
+    2. Route Definition Search - Look for route decorators (@app.route, @router.get, etc.)
+    3. Path Segment Narrowing - Progressively search shorter path segments
+    4. Filename Heuristic - Match based on last path segment as potential filename
     
     Args:
         url (str): The finding URL (e.g. http://target:8080/api/users/123)
@@ -952,47 +958,98 @@ def resolve_source_file(url: str, source_path: str) -> str:
     Returns:
         str or None: Relative path to the source file if found, else None.
     """
+    if not source_path or not os.path.isdir(source_path):
+        return None
+        
     try:
         parsed = urllib.parse.urlparse(url)
-        path = parsed.path # e.g. /api/users/123
-        if not path or path == "/": return None
+        path = parsed.path  # e.g. /api/users/123
+        if not path or path == "/": 
+            return None
         
-        # 1. Exact Match Search
-        # We search for the string in the codebase.
-        # Note: We limit grep to source extensions to speed up
-        grep_cmd = ["grep", "-r", "-l", path, source_path]
-        try:
-            # We catch output. If multiple files, take first valid one.
-            out = subprocess.check_output(grep_cmd, stderr=subprocess.DEVNULL).decode().strip()
-            if out:
-                # grep -l returns newlines
-                return os.path.relpath(out.split('\n')[0], source_path)
-        except: pass
+        # Normalize path: remove leading/trailing slashes
+        clean_path = path.strip("/")
+        segments = clean_path.split("/") if clean_path else []
         
-        # 2. Narrow Search (Dynamic ID handling)
-        # Split path and strip last segment: /api/users/123 -> /api/users
-        # Only try if path has reasonable depth
-        segments = path.strip("/").split("/")
+        # Define source file extensions to consider
+        source_extensions = (".py", ".js", ".ts", ".go", ".php", ".java", ".rb", ".rs", ".cs")
+        
+        def find_source_files_containing(pattern: str) -> list:
+            """Helper: Find source files containing a pattern using grep."""
+            try:
+                grep_cmd = ["grep", "-r", "-l", "--include=*.py", "--include=*.js", 
+                           "--include=*.ts", "--include=*.go", "--include=*.php",
+                           "--include=*.java", "--include=*.rb", pattern, source_path]
+                out = subprocess.check_output(grep_cmd, stderr=subprocess.DEVNULL, timeout=10).decode().strip()
+                return [line for line in out.split('\n') if line and line.endswith(source_extensions)]
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                return []
+        
+        # Strategy 1: Direct File Path Match
+        # Check if URL path directly maps to a file (e.g., /app/routes/files.py)
+        potential_file = os.path.join(source_path, clean_path)
+        if os.path.isfile(potential_file):
+            logger.debug(f"   [resolve] Strategy 1 Match: Direct file path")
+            return os.path.relpath(potential_file, source_path)
+        
+        # Try with common extensions
+        for ext in source_extensions:
+            potential_file = os.path.join(source_path, clean_path + ext)
+            if os.path.isfile(potential_file):
+                logger.debug(f"   [resolve] Strategy 1 Match: File with extension {ext}")
+                return os.path.relpath(potential_file, source_path)
+        
+        # Strategy 2: Route Definition Search
+        # Look for common route decorator patterns containing the path
+        route_patterns = [
+            f'@app.route("{path}"',       # Flask
+            f'@app.route(\'{path}\'',     # Flask
+            f'@router.get("{path}"',      # FastAPI
+            f'@router.post("{path}"',     # FastAPI
+            f'"{path}"',                  # Generic route string
+            f"'{path}'",                  # Generic route string
+        ]
+        
+        for pattern in route_patterns:
+            matches = find_source_files_containing(pattern)
+            if matches:
+                result = os.path.relpath(matches[0], source_path)
+                logger.debug(f"   [resolve] Strategy 2 Match: Route pattern '{pattern}' in {result}")
+                return result
+        
+        # Strategy 3: Path Segment Narrowing
+        # Progressively try shorter path segments (handles dynamic IDs like /users/123)
         if len(segments) > 1:
-            # Try progressively shorter paths
-            for i in range(len(segments)-1, 0, -1):
+            for i in range(len(segments) - 1, 0, -1):
                 subpath = "/" + "/".join(segments[:i])
-                if len(subpath) < 3: continue # Don't search for "/" or "/v1" too broadly
+                if len(subpath) < 3:
+                    continue  # Too short, would match too many files
                 
-                # Search for route definitions specifically to avoid false positive text matches
-                # searching for subpath strings
-                grep_cmd = ["grep", "-r", "-l", subpath, source_path]
-                try:
-                    out = subprocess.check_output(grep_cmd, stderr=subprocess.DEVNULL).decode().strip()
-                    lines = out.split('\n')
-                    for line in lines:
-                        if not line: continue
-                        # Validation: Does this file look like a backend source?
-                        if line.endswith((".py", ".js", ".ts", ".go", ".php", ".java")):
-                            # We found a code file containing the partial path. High confidence.
-                            return os.path.relpath(line, source_path)
-                except: pass
-                
+                matches = find_source_files_containing(subpath)
+                if matches:
+                    result = os.path.relpath(matches[0], source_path)
+                    logger.debug(f"   [resolve] Strategy 3 Match: Subpath '{subpath}' in {result}")
+                    return result
+        
+        # Strategy 4: Filename Heuristic
+        # Check if last segment could be a route handler file (e.g., "users" -> users.py)
+        if segments:
+            last_segment = segments[-1]
+            # Skip if it looks like a numeric ID
+            if not last_segment.isdigit() and len(last_segment) > 2:
+                for ext in source_extensions:
+                    # Search for files named after the last segment
+                    try:
+                        find_cmd = ["find", source_path, "-name", f"{last_segment}{ext}", "-type", "f"]
+                        out = subprocess.check_output(find_cmd, stderr=subprocess.DEVNULL, timeout=5).decode().strip()
+                        if out:
+                            result = os.path.relpath(out.split('\n')[0], source_path)
+                            logger.debug(f"   [resolve] Strategy 4 Match: Filename '{last_segment}{ext}'")
+                            return result
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                        pass
+        
+        logger.debug(f"   [resolve] No match found for URL: {url}")
         return None
         
     except Exception as e:

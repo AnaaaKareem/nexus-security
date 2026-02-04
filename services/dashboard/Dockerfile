@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 
 # Install python dependencies
 COPY services/dashboard/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --default-timeout=1000 --retries 10 --no-cache-dir -r requirements.txt
 
 # Copy Dashboard Code
 COPY services/dashboard/ .

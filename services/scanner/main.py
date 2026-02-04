@@ -179,23 +179,10 @@ async def parse_report_http(file: UploadFile = File(...)):
     findings = extract_findings(content, file.filename)
     return {"findings": findings}
 
-import time
-
-def run_heartbeat():
-    while True:
-        try:
-            logger.info("Service Heartbeat", extra_info={"event": "heartbeat", "status": "up"})
-            time.sleep(30)
-        except Exception as e:
-            logger.error(f"Heartbeat failed: {e}")
-            time.sleep(30)
 
 @app.on_event("startup")
 async def startup_event():
     logger.info("Scanner Service HTTP API Started", extra_info={"event": "startup_complete"})
-    # Start heartbeat daemon for Grafana monitoring (logs every 30 seconds)
-    hb_thread = threading.Thread(target=run_heartbeat, daemon=True)
-    hb_thread.start()
 
 @app.get("/health")
 def health_check():

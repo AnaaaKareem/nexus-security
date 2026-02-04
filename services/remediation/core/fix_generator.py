@@ -20,11 +20,18 @@ logger = get_logger(__name__)
 # Get LLM config from Vault (with env var fallback)
 llm_config = get_llm_config()
 
+# Determine model and kwargs
+model = llm_config.get("model", "qwen/qwen3-coder:free")
+model_kwargs = {}
+if "kimi" in model.lower():
+    model_kwargs["extra_body"] = {"chat_template_kwargs": {"thinking": True}}
+
 # Initialize LangChain ChatOpenAI client for code generation
 llm = ChatOpenAI(
     base_url=llm_config.get("base_url", "https://openrouter.ai/api/v1"),
     api_key=llm_config.get("api_key", "sk-or-placeholder"),
-    model=llm_config.get("model", "qwen/qwen3-coder:free")
+    model=model,
+    model_kwargs=model_kwargs
 )
 
 async def generate_fix_code(finding: Dict[str, Any], project: str) -> str:

@@ -105,22 +105,22 @@ def create_consolidated_pr(repo_name, branch_name, file_updates, issue_summary, 
                     else:
                         logger.warning(f"Error updating {fpath}: {e}")
                 
-        # 4. Check for existing PR
-        existing_pr = None
+        # 4. Check for existing PR & Close it
         open_prs = repo.get_pulls(state='open', head=f"{repo.owner.login}:{branch_name}")
-        for pr in open_prs:
-            existing_pr = pr
-            break
+        for existing_pr in open_prs:
+            try:
+                logger.info(f"🛑 Closing existing PR #{existing_pr.number} to create a fresh one.")
+                existing_pr.create_issue_comment(f"**🔄 AI Agent Update**: Closing this PR to open a fresh one for the latest run.\n\nNew fixes are being applied to branch `{branch_name}`.")
+                existing_pr.edit(state='closed')
+                time.sleep(2) # Give GitHub a moment
+            except Exception as e:
+                logger.warning(f"Failed to close existing PR #{existing_pr.number}: {e}")
             
-        # 5. Create or Comment on PR
+        # 5. Create new PR
         body = _generate_pr_body(file_updates)
         
-        if existing_pr:
-            logger.info(f"🔄 Updating existing PR #{existing_pr.number}")
-            existing_pr.create_issue_comment(f"**🔄 AI Agent Update**: Added {len(file_updates)} new fixes.\n\n{body}")
-            return existing_pr.html_url
-        else:
-            logger.info(f"📝 Opening new Consolidated PR...")
+        logger.info(f"📝 Opening new Consolidated PR...")
+        try:
             pr = repo.create_pull(
                 title=f"🛡️ AI Security Fixes (Consolidated)",
                 body=body,
@@ -129,6 +129,13 @@ def create_consolidated_pr(repo_name, branch_name, file_updates, issue_summary, 
             )
             logger.info(f"✅ PR CREATED: {pr.html_url}")
             return pr.html_url
+        except GithubException as e:
+            if e.status == 422 and "A pull request already exists" in str(e):
+                 # Edge case: If closure failed or race condition, try to find it again and return it
+                 logger.warning("PR creation failed (Already Exists). update failed to close? fallback to finding it.")
+                 for pr in repo.get_pulls(state='open', head=f"{repo.owner.login}:{branch_name}"):
+                     return pr.html_url
+            raise e
 
     except Exception as e:
         logger.error(f"❌ Agent Error: {e}")

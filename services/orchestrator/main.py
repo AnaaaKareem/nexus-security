@@ -119,28 +119,13 @@ async def lifespan(app: FastAPI):
 import threading
 import time
 
-def run_heartbeat():
-    """
-    Background thread that logs a heartbeat event every 30 seconds.
-    Ensures Grafana 'Status' panels remain Green even when the service is idle.
-    """
-    while True:
-        try:
-            # We use extra_info to tag this as a metric event
-            logger.info("Service Heartbeat", extra_info={"event": "heartbeat", "status": "up"})
-            time.sleep(30)
-        except Exception as e:
-            logger.error(f"Heartbeat failed: {e}")
-            time.sleep(30)
 
 app = FastAPI(title="Universal AI Security Agent", lifespan=lifespan)
 
 @app.on_event("startup")
 async def startup_event():
-    # Start the heartbeat daemon thread for Grafana monitoring
-    # This runs in the background and logs status every 30 seconds
-    hb_thread = threading.Thread(target=run_heartbeat, daemon=True)
-    hb_thread.start()
+    # Placeholder for startup tasks if needed
+    pass
 
 async def ensure_services_ready():
     """

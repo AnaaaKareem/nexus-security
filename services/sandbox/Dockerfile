@@ -4,9 +4,10 @@ WORKDIR /app
 
 # Install Docker CLI via multi-stage copy
 COPY --from=library/docker:latest /usr/local/bin/docker /usr/local/bin/docker
-    
+# Copy requirements and install dependencies
 COPY services/sandbox/requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy common
 COPY services/common /app/common

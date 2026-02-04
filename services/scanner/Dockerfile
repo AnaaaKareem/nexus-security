@@ -6,7 +6,8 @@ WORKDIR /app
 COPY --from=library/docker:latest /usr/local/bin/docker /usr/local/bin/docker
 
 COPY services/scanner/requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 
 # Copy common
 COPY services/common /app/common

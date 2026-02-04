@@ -6,7 +6,4 @@ langchain-openai
 langchain-core
 PyGithub
 redis
-
-
 python-gitlab>=4.4.0
-hvac>=2.1.0

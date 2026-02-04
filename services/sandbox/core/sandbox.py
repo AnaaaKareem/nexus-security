@@ -274,7 +274,13 @@ def _safe_cleanup(container):
          logger.warning(f"Error removing container: {e}")
 
 def _strip_llm_chatter(text: str) -> str:
-    """Removes markdown code blocks if present."""
+    """Removes markdown code blocks and LLM reasoning tags if present."""
+    # First, remove <think>...</think> or <thinking>...</thinking> blocks
+    # These are common in reasoning models like qwen3, kimi, etc.
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+    
+    # Then extract code from markdown blocks if present
     match = re.search(r"```(?:\w+)?\n(.*?)\n```", text, re.DOTALL)
     if match:
         return match.group(1).strip()

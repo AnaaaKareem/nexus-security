@@ -175,17 +175,4 @@ async def readiness_check():
 @app.on_event("startup")
 async def startup_event():
     logger.info("Analysis Service HTTP API Started", extra_info={"event": "startup_complete"})
-    # Start the Heartbeat
-    hb_thread = threading.Thread(target=run_heartbeat, daemon=True)
-    hb_thread.start()
 
-import time
-
-def run_heartbeat():
-    while True:
-        try:
-            logger.info("Service Heartbeat", extra_info={"event": "heartbeat", "status": "up"})
-            time.sleep(30)
-        except Exception as e:
-            logger.error(f"Heartbeat failed: {e}")
-            time.sleep(30)
